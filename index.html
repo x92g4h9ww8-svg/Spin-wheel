@@ -1,0 +1,84 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spin the Wheel</title>
+  <style>
+    body { display: flex; justify-content: center; align-items: center; height: 100vh; background: #111; margin: 0; flex-direction: column; color: white; font-family: Arial; }
+    canvas { background: #222; border-radius: 50%; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 18px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <canvas id="wheel" width="400" height="400"></canvas>
+  <button onclick="spin()">SPIN</button>
+  <audio id="spin-sound" src="spin.mp3" preload="auto"></audio>
+  <audio id="win-sound" src="win.mp3" preload="auto"></audio>
+
+  <script>
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const segments = ['5%', '7%', '10%', '15%', '20%'];
+    const weights = [1, 1, 1, 3, 5]; // Higher weight for 15% and 20%
+    const weightedSegments = weights.flatMap((w, i) => Array(w).fill(segments[i]));
+    const colors = ['#FF5733', '#FFBD33', '#33FF57', '#33DBFF', '#9B59B6'];
+    let startAngle = 0;
+    const arc = Math.PI * 2 / segments.length;
+    let spinTimeout = null;
+    let angle = 0;
+    let spinAngle = 0;
+    let spinning = false;
+
+    function drawWheel() {
+      for (let i = 0; i < segments.length; i++) {
+        const angleSegment = startAngle + i * arc;
+        ctx.fillStyle = colors[i];
+        ctx.beginPath();
+        ctx.moveTo(200, 200);
+        ctx.arc(200, 200, 200, angleSegment, angleSegment + arc);
+        ctx.lineTo(200, 200);
+        ctx.fill();
+        ctx.save();
+        ctx.translate(200, 200);
+        ctx.rotate(angleSegment + arc / 2);
+        ctx.fillStyle = '#fff';
+        ctx.font = '16px Arial';
+        ctx.fillText(segments[i], 120, 0);
+        ctx.restore();
+      }
+    }
+
+    function rotateWheel() {
+      spinAngle *= 0.97;
+      if (spinAngle <= 0.2) {
+        clearTimeout(spinTimeout);
+        spinning = false;
+        document.getElementById('win-sound').play();
+        return;
+      }
+      angle += spinAngle;
+      angle %= 2 * Math.PI;
+      startAngle = angle;
+      drawWheel();
+      spinTimeout = setTimeout(rotateWheel, 30);
+    }
+
+    function spin() {
+      if (spinning) return;
+      const result = weightedSegments[Math.floor(Math.random() * weightedSegments.length)];
+      const index = segments.indexOf(result);
+      const offset = index * arc + arc / 2;
+      angle = (Math.PI * 10) + (2 * Math.PI - offset);
+      startAngle = 0;
+      spinAngle = 0.5;
+      document.getElementById('spin-sound').play();
+      spinning = true;
+      rotateWheel();
+    }
+
+    drawWheel();
+  </script>
+</body>
+</html>
