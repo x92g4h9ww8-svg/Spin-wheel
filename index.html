@@ -1,44 +1,107 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Spin and Win</title>
+  <title>Spin the Wheel</title>
   <style>
     body {
+      font-family: Arial, sans-serif;
       background-color: #111;
       color: white;
-      font-family: Arial, sans-serif;
       text-align: center;
-      padding: 20px;
-    }
-    h1 {
-      font-size: 2em;
+      padding: 30px;
     }
     canvas {
-      margin: 20px auto;
-      display: block;
-      background: white;
-      border-radius: 50%;
+      margin-top: 20px;
+    }
+    #spin {
+      margin-top: 20px;
+      padding: 10px 30px;
+      font-size: 18px;
+      cursor: pointer;
     }
     #result {
-      font-size: 1.5em;
-      margin-top: 20px;
+      margin-top: 30px;
+      font-size: 24px;
       font-weight: bold;
-    }
-    button {
-      font-size: 1.2em;
-      padding: 10px 20px;
-      margin-top: 10px;
+      color: gold;
     }
   </style>
 </head>
 <body>
   <h1>🎯 Tap to Spin and Win!</h1>
-  <canvas id="wheel" width="300" height="300"></canvas>
-  <button onclick="spin()">Spin the Wheel</button>
+  <canvas id="wheel" width="400" height="400"></canvas>
+  <br/>
+  <button id="spin">Spin the Wheel</button>
   <div id="result"></div>
-  <audio id="win-sound" src="win.mp3" preload="auto"></audio>
-  <script src="script.js"></script>
+
+  <audio id="spinSound" src="spin.mp3" preload="auto"></audio>
+  <audio id="winSound" src="win.mp3" preload="auto"></audio>
+
+  <script>
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const segments = ["5% OFF", "10% OFF", "15% OFF", "20% OFF", "No this time ☹️"];
+    const colors = ["#f44336", "#4caf50", "#2196f3", "#ffeb3b", "#9c27b0"];
+    let startAngle = 0;
+    const arc = Math.PI * 2 / segments.length;
+    const spinSound = document.getElementById("spinSound");
+    const winSound = document.getElementById("winSound");
+    const result = document.getElementById("result");
+
+    function drawWheel() {
+      for (let i = 0; i < segments.length; i++) {
+        const angle = startAngle + i * arc;
+        ctx.beginPath();
+        ctx.fillStyle = colors[i];
+        ctx.moveTo(200, 200);
+        ctx.arc(200, 200, 200, angle, angle + arc);
+        ctx.lineTo(200, 200);
+        ctx.fill();
+        ctx.save();
+        ctx.fillStyle = "white";
+        ctx.translate(200 + Math.cos(angle + arc / 2) * 150, 200 + Math.sin(angle + arc / 2) * 150);
+        ctx.rotate(angle + arc / 2 + Math.PI / 2);
+        ctx.fillText(segments[i], -ctx.measureText(segments[i]).width / 2, 0);
+        ctx.restore();
+      }
+    }
+
+    drawWheel();
+
+    document.getElementById("spin").addEventListener("click", () => {
+      spinSound.play();
+      result.textContent = "";
+      const duration = 3000;
+      const rotations = Math.floor(Math.random() * 3 + 4);
+      const endAngle = startAngle + rotations * 2 * Math.PI + Math.random() * 2 * Math.PI;
+      const start = performance.now();
+
+      function animate(timestamp) {
+        const progress = Math.min((timestamp - start) / duration, 1);
+        startAngle = endAngle * easeOut(progress);
+        ctx.clearRect(0, 0, 400, 400);
+        drawWheel();
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          spinSound.pause();
+          spinSound.currentTime = 0;
+          winSound.play();
+          const degrees = (startAngle * 180 / Math.PI) % 360;
+          const index = Math.floor(segments.length - degrees / 360 * segments.length) % segments.length;
+          result.textContent = `🎉 Congratulations! You just won an extra ${segments[index]} off your remodeling project. 🎉`;
+        }
+      }
+
+      requestAnimationFrame(animate);
+    });
+
+    function easeOut(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+  </script>
 </body>
 </html>
