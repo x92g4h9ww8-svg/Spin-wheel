@@ -1,61 +1,70 @@
-
-const canvas = document.getElementById('wheel');
+const canvas = document.getElementById('wheelCanvas');
 const ctx = canvas.getContext('2d');
-const result = document.getElementById('result');
-const winSound = document.getElementById('win-sound');
+const spinButton = document.getElementById('spinButton');
+const resultText = document.getElementById('resultText');
+const spinSound = document.getElementById('spinSound');
+const winSound = document.getElementById('winSound');
 
-const prizes = ['10% Off', 'Free Shipping', '$5 Gift Card', 'Try Again', '20% Off'];
-const colors = ['#f44336', '#4CAF50', '#2196F3', '#FFEB3B', '#9C27B0'];
+const segments = [
+  '5% OFF',
+  '10% OFF',
+  '15% OFF',
+  '20% OFF',
+  'No this time ☹️'
+];
 
-let angle = 0;
-let spinning = false;
+const colors = ['#e74c3c', '#2ecc71', '#3498db', '#f1c40f', '#9b59b6'];
+let startAngle = 0;
 
 function drawWheel() {
-  const arcSize = (2 * Math.PI) / prizes.length;
-  for (let i = 0; i < prizes.length; i++) {
-    const startAngle = angle + i * arcSize;
-    const endAngle = startAngle + arcSize;
-    ctx.beginPath();
+  const arc = 2 * Math.PI / segments.length;
+  for (let i = 0; i < segments.length; i++) {
+    const angle = startAngle + i * arc;
     ctx.fillStyle = colors[i];
+    ctx.beginPath();
     ctx.moveTo(150, 150);
-    ctx.arc(150, 150, 150, startAngle, endAngle);
+    ctx.arc(150, 150, 150, angle, angle + arc);
     ctx.fill();
     ctx.save();
     ctx.translate(150, 150);
-    ctx.rotate(startAngle + arcSize / 2);
+    ctx.rotate(angle + arc / 2);
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 16px Arial';
-    ctx.textAlign = 'right';
-    ctx.fillText(prizes[i], 140, 10);
+    ctx.font = '16px sans-serif';
+    ctx.fillText(segments[i], 40, 0);
     ctx.restore();
   }
 }
 
-function spin() {
-  if (spinning) return;
-  spinning = true;
-  const spins = Math.random() * 2000 + 3000;
-  const duration = 3000;
-  const start = performance.now();
+drawWheel();
 
-  function animate(now) {
-    const elapsed = now - start;
-    if (elapsed < duration) {
-      angle += spins * (1 - elapsed / duration) * 0.01;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawWheel();
-      requestAnimationFrame(animate);
+function spinWheel() {
+  const spinDegrees = Math.floor(3600 + Math.random() * 720);
+  const spinDuration = 4000;
+  const finalAngle = (spinDegrees % 360) * Math.PI / 180;
+  const arc = 2 * Math.PI / segments.length;
+  const winningIndex = segments.length - Math.floor((finalAngle % (2 * Math.PI)) / arc) - 1;
+  spinSound.play();
+  let start = null;
+  function rotate(timestamp) {
+    if (!start) start = timestamp;
+    const progress = timestamp - start;
+    const angle = (spinDegrees * Math.PI / 180) * (progress / spinDuration);
+    startAngle = angle % (2 * Math.PI);
+    ctx.clearRect(0, 0, 300, 300);
+    drawWheel();
+    if (progress < spinDuration) {
+      requestAnimationFrame(rotate);
     } else {
-      spinning = false;
-      angle %= 2 * Math.PI;
-      const index = Math.floor((prizes.length - (angle / (2 * Math.PI)) * prizes.length) % prizes.length);
-      const prize = prizes[index];
-      result.innerText = `🎉 You won: ${prize} 🎉`;
       winSound.play();
+      const prize = segments[winningIndex];
+      if (prize.includes('%')) {
+        resultText.innerHTML = `🎉 Congratulations! You just won an extra ${prize} off your remodeling project!`;
+      } else {
+        resultText.innerHTML = `😞 ${prize}`;
+      }
     }
   }
-
-  requestAnimationFrame(animate);
+  requestAnimationFrame(rotate);
 }
 
-drawWheel();
+spinButton.addEventListener('click', spinWheel);
