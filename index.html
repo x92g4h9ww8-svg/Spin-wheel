@@ -2,130 +2,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Spin the Wheel</title>
-  <style>
-    body {
-      background-color: #111;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
-    }
-    #wheelCanvas {
-      margin-top: 40px;
-    }
-    #spin {
-      margin-top: 20px;
-      padding: 10px 25px;
-      font-size: 20px;
-      border: none;
-      background-color: #28a745;
-      color: white;
-      cursor: pointer;
-    }
-    #result {
-      margin-top: 20px;
-      font-size: 24px;
-      font-weight: bold;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spin Wheel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #111;
+            color: #fff;
+        }
+        #wheel {
+            width: 300px;
+            height: 300px;
+            border: 10px solid #fff;
+            border-radius: 50%;
+            margin: 50px auto;
+            background: conic-gradient(#f44336 20%, #4caf50 20% 40%, #ffeb3b 40% 60%, #2196f3 60% 80%, #9c27b0 80% 100%);
+            transition: transform 6s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        #spinBtn {
+            padding: 15px 30px;
+            font-size: 20px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+        #result {
+            font-size: 24px;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
-  <h1>Spin the Wheel and Win!</h1>
-  <canvas id="wheelCanvas" width="500" height="500"></canvas><br />
-  <button id="spin">SPIN</button>
-  <div id="result"></div>
-  <audio id="spinSound" src="spin.mp3" preload="auto"></audio>
-  <audio id="winSound" src="win.mp3" preload="auto"></audio>
-  <script>
-    const canvas = document.getElementById("wheelCanvas");
-    const ctx = canvas.getContext("2d");
-    const spinButton = document.getElementById("spin");
-    const resultDiv = document.getElementById("result");
-    const spinSound = document.getElementById("spinSound");
-    const winSound = document.getElementById("winSound");
+    <h1>🎯 Tap to Spin and Win!</h1>
+    <div id="wheel"></div>
+    <button id="spinBtn">Spin the Wheel</button>
+    <div id="result"></div>
 
-    const options = ["5%", "7%", "10%", "15%", "20%"];
-    const colors = ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"];
-    const arcSize = (2 * Math.PI) / options.length;
-    let startAngle = 0;
-    const radius = 200;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    <audio id="spinSound" src="spin.mp3" preload="auto"></audio>
+    <audio id="winSound" src="win.mp3" preload="auto"></audio>
 
-    function drawWheel() {
-      for (let i = 0; i < options.length; i++) {
-        const angle = startAngle + i * arcSize;
-        ctx.fillStyle = colors[i];
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        ctx.arc(centerX, centerY, radius, angle, angle + arcSize);
-        ctx.lineTo(centerX, centerY);
-        ctx.fill();
+    <script>
+        const wheel = document.getElementById("wheel");
+        const result = document.getElementById("result");
+        const spinBtn = document.getElementById("spinBtn");
+        const spinSound = document.getElementById("spinSound");
+        const winSound = document.getElementById("winSound");
 
-        ctx.save();
-        ctx.fillStyle = "#fff";
-        ctx.translate(centerX, centerY);
-        ctx.rotate(angle + arcSize / 2);
-        ctx.textAlign = "right";
-        ctx.font = "20px Arial";
-        ctx.fillText(options[i], radius - 10, 10);
-        ctx.restore();
-      }
-    }
+        const segments = ["5%", "7%", "10%", "15%", "20%"];
+        let isSpinning = false;
 
-    drawWheel();
+        spinBtn.onclick = () => {
+            if (isSpinning) return;
+            isSpinning = true;
+            result.textContent = "";
 
-    let isSpinning = false;
-    spinButton.addEventListener("click", () => {
-      if (isSpinning) return;
+            const segmentAngle = 360 / segments.length;
+            const randomIndex = Math.floor(Math.random() * segments.length);
+            const degrees = 3600 + randomIndex * segmentAngle + (Math.random() * segmentAngle);
 
-      isSpinning = true;
-      resultDiv.textContent = "";
-      let spinAngle = Math.random() * 360 + 1800;
-      let currentAngle = 0;
-      const spinDuration = 7000;
-      const startTime = performance.now();
+            wheel.style.transform = `rotate(${degrees}deg)`;
+            spinSound.play();
 
-      spinSound.play();
-
-      function animateSpin(time) {
-        const elapsed = time - startTime;
-        if (elapsed < spinDuration) {
-          const progress = elapsed / spinDuration;
-          currentAngle = spinAngle * easeOut(progress);
-          drawRotatedWheel(currentAngle);
-          requestAnimationFrame(animateSpin);
-        } else {
-          spinSound.pause();
-          spinSound.currentTime = 0;
-          currentAngle = spinAngle;
-          drawRotatedWheel(currentAngle);
-          const finalAngle = (360 - (currentAngle % 360)) % 360;
-          const index = Math.floor(finalAngle / (360 / options.length));
-          resultDiv.textContent = `🎉 Congratulations! You got ${options[index]} OFF! 🎉`;
-          winSound.play();
-          isSpinning = false;
-        }
-      }
-
-      requestAnimationFrame(animateSpin);
-    });
-
-    function easeOut(t) {
-      return 1 - Math.pow(1 - t, 3);
-    }
-
-    function drawRotatedWheel(angle) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-      ctx.translate(centerX, centerY);
-      ctx.rotate((angle * Math.PI) / 180);
-      ctx.translate(-centerX, -centerY);
-      drawWheel();
-      ctx.restore();
-    }
-  </script>
+            setTimeout(() => {
+                const winningPercent = segments[randomIndex];
+                result.innerHTML = `🎉 Congratulations! You won an extra <strong>${winningPercent}</strong> OFF your remodeling project!`;
+                winSound.play();
+                isSpinning = false;
+            }, 6000);
+        };
+    </script>
 </body>
 </html>
