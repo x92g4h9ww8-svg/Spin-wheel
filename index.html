@@ -3,60 +3,129 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Congratulations!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spin the Wheel</title>
   <style>
-    body { text-align: center; font-family: Arial, sans-serif; background: #fefefe; }
-    h1 { margin-top: 20px; font-size: 36px; color: #2c3e50; }
-    h2 { margin-top: 10px; font-size: 20px; color: #34495e; }
-    #wheel { margin: 30px auto; width: 300px; height: 300px; border-radius: 50%;
-             border: 12px solid #2c3e50; position: relative; overflow: hidden; }
-    .segment {
-        width: 50%; height: 50%; position: absolute; top: 50%; left: 50%;
-        transform-origin: 0% 0%; display: flex; justify-content: center;
-        align-items: center; font-weight: bold; font-size: 18px; color: #fff;
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
     }
-    .s1 { transform: rotate(0deg) skewY(-60deg); background: #e74c3c; }
-    .s2 { transform: rotate(60deg) skewY(-60deg); background: #f39c12; }
-    .s3 { transform: rotate(120deg) skewY(-60deg); background: #27ae60; }
-    .s4 { transform: rotate(180deg) skewY(-60deg); background: #3498db; }
-    .s5 { transform: rotate(240deg) skewY(-60deg); background: #9b59b6; }
-    .s6 { transform: rotate(300deg) skewY(-60deg); background: #1abc9c; }
-    #spin-btn { margin-top: 20px; padding: 12px 35px; font-size: 20px; background: #2c3e50; color: #fff; border: none; cursor: pointer; }
-    #result { margin-top: 30px; font-size: 24px; color: green; }
+    #wheelCanvas {
+      margin-top: 40px;
+    }
+    #spin {
+      margin-top: 20px;
+      padding: 10px 25px;
+      font-size: 20px;
+      border: none;
+      background-color: #28a745;
+      color: white;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 24px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h1>Congratulations!</h1>
-  <h2>On your own remodeling project</h2>
-  <p>Let's spin the wheel and see what is the extra discount you can get on this project.</p>
-  <div id="wheel">
-    <div class="segment s1">10%</div>
-    <div class="segment s2">15%</div>
-    <div class="segment s3">25%</div>
-    <div class="segment s4">35%</div>
-    <div class="segment s5">45%</div>
-    <div class="segment s6">55%</div>
-  </div>
-  <button id="spin-btn">SPIN</button>
+  <h1>Spin the Wheel and Win!</h1>
+  <canvas id="wheelCanvas" width="500" height="500"></canvas><br />
+  <button id="spin">SPIN</button>
   <div id="result"></div>
+  <audio id="spinSound" src="spin.mp3" preload="auto"></audio>
+  <audio id="winSound" src="win.mp3" preload="auto"></audio>
   <script>
-    const spinButton = document.getElementById("spin-btn");
-    const resultDisplay = document.getElementById("result");
-    const outcomes = [10, 15, 25, 35, 45, 55, 55, 55, 55, 55, 55, 55, 55];
-    let hasSpun = localStorage.getItem("hasSpun");
-    if (hasSpun === "true") {
-      spinButton.disabled = true;
-      resultDisplay.textContent = "You already used your spin!";
-    }
-    spinButton.addEventListener("click", function () {
-      if (!hasSpun) {
-        const index = Math.floor(Math.random() * outcomes.length);
-        const result = outcomes[index];
-        resultDisplay.textContent = `You won an extra ${result}% OFF your project!`;
-        localStorage.setItem("hasSpun", "true");
-        spinButton.disabled = true;
+    const canvas = document.getElementById("wheelCanvas");
+    const ctx = canvas.getContext("2d");
+    const spinButton = document.getElementById("spin");
+    const resultDiv = document.getElementById("result");
+    const spinSound = document.getElementById("spinSound");
+    const winSound = document.getElementById("winSound");
+
+    const options = ["5%", "7%", "10%", "15%", "20%"];
+    const colors = ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF"];
+    const arcSize = (2 * Math.PI) / options.length;
+    let startAngle = 0;
+    const radius = 200;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+
+    function drawWheel() {
+      for (let i = 0; i < options.length; i++) {
+        const angle = startAngle + i * arcSize;
+        ctx.fillStyle = colors[i];
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, angle, angle + arcSize);
+        ctx.lineTo(centerX, centerY);
+        ctx.fill();
+
+        ctx.save();
+        ctx.fillStyle = "#fff";
+        ctx.translate(centerX, centerY);
+        ctx.rotate(angle + arcSize / 2);
+        ctx.textAlign = "right";
+        ctx.font = "20px Arial";
+        ctx.fillText(options[i], radius - 10, 10);
+        ctx.restore();
       }
+    }
+
+    drawWheel();
+
+    let isSpinning = false;
+    spinButton.addEventListener("click", () => {
+      if (isSpinning) return;
+
+      isSpinning = true;
+      resultDiv.textContent = "";
+      let spinAngle = Math.random() * 360 + 1800;
+      let currentAngle = 0;
+      const spinDuration = 7000;
+      const startTime = performance.now();
+
+      spinSound.play();
+
+      function animateSpin(time) {
+        const elapsed = time - startTime;
+        if (elapsed < spinDuration) {
+          const progress = elapsed / spinDuration;
+          currentAngle = spinAngle * easeOut(progress);
+          drawRotatedWheel(currentAngle);
+          requestAnimationFrame(animateSpin);
+        } else {
+          spinSound.pause();
+          spinSound.currentTime = 0;
+          currentAngle = spinAngle;
+          drawRotatedWheel(currentAngle);
+          const finalAngle = (360 - (currentAngle % 360)) % 360;
+          const index = Math.floor(finalAngle / (360 / options.length));
+          resultDiv.textContent = `🎉 Congratulations! You got ${options[index]} OFF! 🎉`;
+          winSound.play();
+          isSpinning = false;
+        }
+      }
+
+      requestAnimationFrame(animateSpin);
     });
+
+    function easeOut(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function drawRotatedWheel(angle) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate((angle * Math.PI) / 180);
+      ctx.translate(-centerX, -centerY);
+      drawWheel();
+      ctx.restore();
+    }
   </script>
 </body>
 </html>
